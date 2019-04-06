@@ -44,6 +44,15 @@ modules handle:
 * seven-segment display control
 * LED matrix display control
 
+```console
+├── library
+│   ├── webfpga_debounce.v
+│   ├── webfpga_neopixel.v
+│   └── webfpga_seven_segment.v
+
+...
+```
+
 ## Versioning
 
 The live version of the website [htts://webfpga.io](webfpga.io) tracks the
