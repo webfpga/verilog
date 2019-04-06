@@ -10,6 +10,32 @@ example category begins with a two-digit prefix that indicates its overall order
 in the scheme of learning progression. Within each category, each individual
 example is placed in it's own sub-sub-directory.
 
+```console
+├── examples
+│   ├── 00-Basics
+│   │   └── blinky
+│   ├── 01-User-Input
+│   │   ├── button
+│   │   └── debounce
+│   ├── 02-LED
+│   │   └── neopixel
+│   ├── 03-Seven-Segment
+│   │   ├── clock
+│   │   ├── counter
+│   │   └── stopwatch
+│   ├── 04-WebUSB-Communication
+│   │   ├── neopixel-control
+│   │   └── simple
+│   ├── 05-Serial
+│   │   ├── I2C
+│   │   ├── SPI
+│   │   └── UART
+│   └── 06-Clocks
+│       └── simple
+
+...
+```
+
 `library/` contains several WebFPGA-specific modules that are compatible with
 the WebFPGA board and physical modules. In here, there are simple to instantiate
 modules handle:
