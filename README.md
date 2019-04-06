@@ -26,8 +26,7 @@ been cut.
 
 ## Contribution
 
-Public contribution is well appreciated! Code can always be improved.
-
-<hr>
+Public contribution is always appreciated! Submit any issues or pull requests
+and we will be sure to get through them as quickly as possible.
 
 &copy; Auburn Ventures 2019, MIT LICENSED
