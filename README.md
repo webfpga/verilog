@@ -17,3 +17,17 @@ modules handle:
 * input button debouncing
 * seven-segment display control
 * LED matrix display control
+
+## Versioning
+
+The live version of the website [htts://webfpga.io](webfpga.io) tracks the
+latest release. Changes here will not be reflected until a new release has
+been cut.
+
+## Contribution
+
+Public contribution is well appreciated! Code can always be improved.
+
+<hr>
+
+&copy; Auburn Ventures 2019, MIT LICENSED
