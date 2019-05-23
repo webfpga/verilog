@@ -14,7 +14,7 @@ module fpga_top(
    reg [24:0] counter;
    
    always @ (posedge clk)
-     if (counter == 24000000)
+     if (counter == 2400000)
        begin
          LED      <= ~LED;
          counter  <= 'b0;
