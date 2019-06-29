@@ -5,9 +5,12 @@ Library hosted at [webfpga.io](https://webfpga.io).
 
 ## Directory Structure
 
+**Note: This structure has not been put into place yet. This current
+example directory is unsorted and unorganizaed.**
+
 `examples/` holds several sub-directories for each example category. Each
-example category begins with a two-digit prefix that indicates its overall order
-in the scheme of learning progression. Within each category, each individual
+example category begins with a two-digit prefix that indicates its overall
+order in the learning progression. Within each category, each individual
 example is placed in it's own sub-sub-directory.
 
 ```console
