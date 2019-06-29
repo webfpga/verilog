@@ -1,28 +1,4 @@
-// --------------------------------------------------------------------
-// Cascadia Web Based FPGA Tools  Section
-//
-// IOs are set with comment directive #CAS_XX ioName ioPin
-// #CAS_IO RGB_DOUT 4
-// #CAS_IO RGB_CLK_OUT 9
-// #CAS_IO RGB_LOAD 6
-//
-// #CAS_IO SIO_MST_OUT_SLV_IN 47
-// #CAS_IO SIO_CLK_OUT 44
-// #CAS_IO SIO_LOAD 37
-// #CAS_IO SIO_MST_IN_SLV_OUT 46
-
-// This builds the SDC file used for P&R and timing checks
-// #CASS_CLK net CLK 83   //ns
 // #CAS_CLK pin OSC_i/CLKHF 83.3    //ns   
-//
-// Device target board is done with directive #CAS_XXXXXX boardName
-// #CAS_TARGET  SHASTAPLUS
-
-// set top level module
-// #CAS_NAME  WF_RGB_dot_matrix  // top level module
-// --------------------------------------------------------------------
-//  #CAS_DESC  8x8 RGB serial dot matrix driver. 
-//
 // @MAP_IO RGB_DOUT    24
 // @MAP_IO RGB_CLK_OUT 25
 // @MAP_IO RGB_LOAD    26
@@ -31,12 +7,6 @@
 // @MAP_IO SIO_CLK_OUT        17 
 // @MAP_IO SIO_LOAD           15
 // @MAP_IO SIO_MST_IN_SLV_OUT 18 
-
-
-//           
-// --------------------------------------------------------------------
-//
-// Revision History :
 
 module fpga_top (
 
