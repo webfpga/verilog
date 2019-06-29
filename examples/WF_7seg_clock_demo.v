@@ -1,40 +1,7 @@
-//
-// --------------------------------------------------------------------
-// --------------------------------------------------------------------
-// Cascadia Web Based FPGA Tools  Section
-//
-// IOs are set with comment directive #CAS_XX ioName ioPin
-// #CAS_IO DOUT 28
-// #CAS_IO CLK_OUT 26
-// #CAS_IO LOAD 25
-// #CAS_IO SWITCH_IN 42
-// #CAS_IO CPU_IN 11
-//
 // @MAP_IO DOUT      10 // (internal FPGA pin = 28)
 // @MAP_IO CLK_OUT   9  // (internal FPGA pin = 26)
 // @MAP_IO LOAD      8  // (internal FPGA pin = 25)
-
-// Clock is define with directive #CAS_XXX  clkName clkPeriod (12MHz)
-// This builds the SDC file used for P&R and timing checks
-// #CASS_CLK net CLK 83   //ns
 // #CAS_CLK pin OSC_i/CLKHF 83.3    //ns   
-//
-// Device target board is done with directive #CAS_XXXXXX boardName
-// #CAS_TARGET  SHASTAPLUS
-
-// set top level module
-// #CAS_NAME  WF_7seg_clock // top level module
-// --------------------------------------------------------------------
-//  #CAS_DESC  7 segment display used as a clock. Push buttom clears clock
-//
-//  This DEMO uses the internal HFOSC which isn't accurate enough for
-//  a real clock. An external cystal is needed to gain the presion needed.
-//
-
-//           
-// --------------------------------------------------------------------
-//
-// Revision History :
 
 module fpga_top(
 

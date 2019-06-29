@@ -1,43 +1,8 @@
-// --------------------------------------------------------------------
-// Cascadia Web Based FPGA Tools  Section
-//
-// IOs are set with comment directive #CAS_XX ioName ioPin
-// #CAS_IO MST_OUT_SLV_IN 47
-// #CAS_IO CLK_OUT 44
-// #CAS_IO LOAD 37
-// #CAS_IO SWITCH_IN 42
-// #CAS_IO CPU_IN 11
-// #CAS_IO MST_IN_SLV_OUT 46 
-// #CAS_IO DTEST 27
-//
 // @MAP_IO MST_OUT_SLV_IN 19 // (original fpga pin = 47)
 // @MAP_IO CLK_OUT        17 // (original fpga pin = 44)
 // @MAP_IO LOAD           15 // (original fpga pin = 37)
 // @MAP_IO MST_IN_SLV_OUT 18 // (original fpga pin = 46)
 // @MAP_IO DTEST          11 // (original fpga pin = 27)
-
-// Clock is define with directive #CAS_XXX  clkName clkPeriod (12MHz)
-// This builds the SDC file used for P&R and timing checks
-// #CASS_CLK net CLK 83   //ns
-// #CAS_CLK pin OSC_i/CLKHF 83.3    //ns   
-//
-// Device target board is done with directive #CAS_XXXXXX boardName
-// #CAS_TARGET  SHASTAPLUS
-
-// set top level module
-// #CAS_NAME  WF_joystick_board_demo // top level module
-// --------------------------------------------------------------------
-//  #CAS_DESC  7 segment display used as a timer. Push buttom stops timer,
-//  then, restarts. Hold push button in for ~1sec resets timer.
-//
-//  This DEMO uses the internal HFOSC which isn't accurate enough for
-//  a real clock. An external cystal is needed to gain the presion needed.
-//
-
-//           
-// --------------------------------------------------------------------
-//
-// Revision History :
 
 module fpga_top(
 
