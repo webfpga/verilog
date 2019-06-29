@@ -27,14 +27,14 @@ module WF_BL_7seg_if (
 
         input clk,
         input scan_enable,   // should be >60Hz, ~2 ms or better
-	                     // 5 calls for one 1 cycle
+                         // 5 calls for one 1 cycle
                              // 60Hz == 16.67ms -> /5 -> 3.33ms
 
         input [3:0] digit0,    // BCD digits, 0 is LSD
         input [3:0] digit1,
         input [3:0] digit2,
         input [3:0] digit3,
-	input [1:0] colon,   // 00 colon, 01 decpoint, 11 none
+    input [1:0] colon,   // 00 colon, 01 decpoint, 11 none
 
         output reg CLK_OUT,
         output     LOAD,
