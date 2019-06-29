@@ -1,7 +1,7 @@
 # webfpga/verilog
 
 This repository contains the Verilog examples and WebFPGA Standard Module
-Library hosted at [webfpga.io](https://webfpga.io).
+Library hosted at [beta.webfpga.io](https://beta.webfpga.io).
 
 ## Directory Structure
 
@@ -58,7 +58,7 @@ modules handle:
 
 ## Versioning
 
-The live version of the website [htts://webfpga.io](webfpga.io) tracks the
+The live version of the website [https://beta.webfpga.io](beta.webfpga.io) tracks the
 latest release. Changes here will not be reflected until a new release has
 been cut.
 
