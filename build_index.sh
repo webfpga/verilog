@@ -23,6 +23,5 @@ traverse() {
 }
 
 echo git_commit: `git rev-parse HEAD`
-echo git_tag: `git rev-parse HEAD`
 echo; traverse ./examples
 echo; traverse ./library
