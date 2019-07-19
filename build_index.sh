@@ -22,6 +22,8 @@ traverse() {
     done
 }
 
-echo git_commit: `git rev-parse HEAD`
-echo; traverse ./examples
-echo; traverse ./library
+{
+    echo git_commit: `git rev-parse HEAD`
+    echo; traverse ./examples
+    echo; traverse ./library
+} | tee index.txt
