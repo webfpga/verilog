@@ -1,0 +1,31 @@
+[
+  {"git_commit": "3af318c7a8b0bc77e73e134d23cf0fe905f683ac"},
+  {"type":"directory","name":"./examples","contents":[
+    {"type":"directory","name":"companion_boards","contents":[
+      {"type":"directory","name":"audio","contents":[
+        {"type":"file","name":"WF_audio_demo.v"}
+      ]},
+      {"type":"directory","name":"dot_matrix","contents":[
+        {"type":"file","name":"WF_RGB_dot_matrix_demo.v"},
+        {"type":"file","name":"WF_RGB_dot_matrix_joystick_demo.v"}
+      ]},
+      {"type":"directory","name":"joystick","contents":[
+        {"type":"file","name":"WF_joystick_board_demo.v"}
+      ]},
+      {"type":"directory","name":"neopixel","contents":[
+        {"type":"file","name":"WF_neopixelx8_fading_demo2.v"},
+        {"type":"file","name":"WF_neopixelx8_fading_demo.v"},
+        {"type":"file","name":"WF_neopixelx8_random_demo.v"}
+      ]},
+      {"type":"directory","name":"seven_segment","contents":[
+        {"type":"file","name":"WF_7seg_clock_demo.v"},
+        {"type":"file","name":"WF_7seg_timer_demo.v"}
+      ]}
+    ]},
+    {"type":"directory","name":"internal_neopixel","contents":[
+      {"type":"file","name":"WF_neopixelx1_fading_demo.v"},
+      {"type":"file","name":"WF_neopixelx1_random_demo.v"}
+    ]},
+    {"type":"file","name":"WF_blinky.v"}
+  ]}
+]
