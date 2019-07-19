@@ -1,4 +1,4 @@
-git_commit: 66373a78aac032e421c7ebbf69b4df09d4af95be
+git_commit: f108c25d710b0b00acfcc48e7697c09097fd26fa
 
 ./examples/companion_boards/audio/WF_audio_demo.v
 ./examples/companion_boards/dot_matrix/WF_RGB_dot_matrix_demo.v
