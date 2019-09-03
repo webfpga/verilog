@@ -8,8 +8,6 @@
 // @MAP_IO MCLK  1
 // @MAP_IO LRCK  2
 // @MAP_IO SDATA 4
-//
-// This Source Code is Public Domain.
 
 module fpga_top (
     output reg  MCLK,    // master (audio codec) clock, our case is ~12MHz

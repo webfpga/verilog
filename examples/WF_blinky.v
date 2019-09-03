@@ -2,8 +2,6 @@
 //
 // The "Hello World" of Digital Logic!
 // This example blinks the on-board user LED once a second.
-//
-// This Source Code is Public Domain.
 
 module fpga_top(output reg WF_LED, input wire WF_CLK);
     reg [24:0] counter;
