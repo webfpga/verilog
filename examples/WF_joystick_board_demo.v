@@ -1,8 +1,30 @@
-// @MAP_IO MST_OUT_SLV_IN 19 // (original fpga pin = 47)
-// @MAP_IO CLK_OUT        17 // (original fpga pin = 44)
-// @MAP_IO LOAD           15 // (original fpga pin = 37)
-// @MAP_IO MST_IN_SLV_OUT 18 // (original fpga pin = 46)
-// @MAP_IO DTEST          11 // (original fpga pin = 27)
+// --------------------------------------------------------------------
+// Cascadia Web Based FPGA Tools  Section
+//
+//
+// @MAP_IO MST_OUT_SLV_IN 20 // (original fpga pin = 47)
+// @MAP_IO CLK_OUT        18 // (original fpga pin = 44)
+// @MAP_IO LOAD           17 // (original fpga pin = 37)
+// @MAP_IO MST_IN_SLV_OUT 19 // (original fpga pin = 46)
+
+// Clock is define with directive #CAS_XXX  clkName clkPeriod (12MHz)
+// This builds the SDC file used for P&R and timing checks
+// #CAS_CLK pin OSC_i/CLKHF 83.3    //ns   
+//
+
+// --------------------------------------------------------------------
+// Demo for the Serial IO expansion board.
+// This includes:
+//  20 bi-color LEDs  (40 total LEDs)
+//  8  slide switches
+//  8  digital outputs
+//  8  digital inputs that are 5 volt tolerent
+//  1  multi directional switch (N,E,S,W, and pushed center
+//
+//           
+// --------------------------------------------------------------------
+//
+// Revision History :
 
 module fpga_top(
 
@@ -68,8 +90,8 @@ module fpga_top(
      // LEDs
              .slide_leds_red(slide_red),
              .slide_leds_green(slide_grn),
-             .status_leds_red(4'b1010),
-             .status_leds_blue(4'b0101),
+             .status_leds_red({joystick[2],joystick[1],joystick[4],joystick[0]}),
+             .status_leds_blue(4'b000),
              .circle_leds_red(circle_red),
              .circle_leds_green(circle_grn),
      // switches
@@ -134,7 +156,7 @@ module fpga_top(
            
  //  count every 12 pulses for a second, advance the switch LEDs
     always @ (posedge clk)
-      if  (count83ms_pulse && ~joystick[2])
+      if  (count83ms_pulse)
         count12 <= count12 + 'b1;
       else
         if (count12 == 12)

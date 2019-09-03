@@ -1,11 +1,23 @@
 // #CAS_CLK pin OSC_i/CLKHF 83.3    //ns   
 
-module fpga_top(output wire WF_NEO);
+module fpga_top(
+    output wire      WF_NEO,
+    input  wire      WF_CPU1,
+    input  wire      WF_BUTTON
+);
 
 // OSC enable
    wire      clk_en = 1'b1;
 	
-   reg [23:0] np_pixels;
+   wire [23:0] np_pixels;
+   wire [15:0] pixel;
+   wire [4:0] rnd_pixels;
+   reg  [2:0] cnt;
+
+
+   // CPU signal
+   reg       cpu_in_d;      // delayed to create pulse
+   wire      cpu_toggled;
 
 /////////////////////////////////////////////////////////////////////////
 //
@@ -27,18 +39,27 @@ module fpga_top(output wire WF_NEO);
            .enable(1'b1),
            .timer_pulse(ten_us));
 
-     // include time base   two ms
-     WF_timer #(.COUNT(199)) two_msec(
+     // include time base   ten ms
+     WF_timer #(.COUNT(999)) ten_msec(
            .clk(clk),
            .enable(ten_us),
-           .timer_pulse(two_ms));
+           .timer_pulse(ten_ms));
+
+     // include time base   demo ms
+     WF_timer #(.COUNT(10)) demo_msec(
+           .clk(clk),
+           .enable(ten_ms),
+           .timer_pulse(demo_ms));
+
+    // create 32 bit sequence for some low randomness
+    WF_random_5 rnd5 (
+         .clk(clk),
+         .enable(demo_ms),
+         .data(rnd_pixels));
 
      // neopixel I/F
-    WF_neopixel_if #(     // parameters for on board neopixel
-	   .NUM_OF_PIXELS(1),
-	   .BIT1_HI(7),
-	   .BIT0_HI(4),
-           .NEO_RESET(10))
+  WF_neopixel_if #(     // parameters for on board neopixel
+           .NUM_OF_PIXELS(1)) // config for on board NEO pixel
     neopixel_inst(
            .clk(clk),
            .ten_us(ten_us),
@@ -46,60 +67,48 @@ module fpga_top(output wire WF_NEO);
            .ram_rd_data(np_pixels),      // neopxiel data
            .DOUT(WF_NEO));                 // neopxiel data out pin
 
+//
+//  debounce switch in
+    WF_switch_debounce switch_deb1 (
+      .clk(clk),              // main clock
+      .sample_en(demo_ms),     // pulse when to sample
+      .switch_in(WF_BUTTON),  // async switch input
+      .switch_out(),          // sync switch out, debounced
+      .switch_pushed(switch_pushed),    // pulse when switch is pushed
+      .switch_released()                // pulse when switch is released
+     );
+
+
+//////////////////////////////////////////////////////////////////              
+  // CPU inputs and Switch logic
+// detect CPU signal changing
+   always @ (posedge clk)
+      cpu_in_d <= WF_CPU1;
+
+    assign cpu_toggled = (cpu_in_d && ~WF_CPU1) || (~cpu_in_d && WF_CPU1);
+
+   always @ (posedge clk)
+     if (cpu_toggled || switch_pushed)
+       cnt <= cnt +1;
 
 //////////////////////////////////////////////////////////////////              
 //  Create colors to DEMO above bit logic.                                      
 //////////////////////////////////////////////////////////////////
-// create colors in the pixel registers.
-  reg [1:0] cnt;   // counts number of 2ms, fading step is cnt(max)*2ms 
-  reg [6:0] cnt2;  // up/down counter to cause fading
-  reg       updn;  // count direction flag
-  reg [2:0] ph;    // phase, switches on of 8 cases to display
+// create colors in pixel registers.
+//
+   wire [7:0] colR,colG,colB;
+//     assign colR = 0; 
+//     assign colG = 8'h80;  //80h is lowest brigthness 
+//     assign colB = 0; 
 
-// bit reverse for neopixel
-  wire [6:0] cnt2_G={cnt2[0],cnt2[1],cnt2[2],cnt2[3],cnt2[4],cnt2[5],cnt2[6]};
-  wire [6:0] cnt2_R={cnt2[0],cnt2[1],cnt2[2],cnt2[3],cnt2[4],cnt2[5],cnt2[6]};
-  wire [6:0] cnt2_B={cnt2[0],cnt2[1],cnt2[2],cnt2[3],cnt2[4],cnt2[5],cnt2[6]};
+     assign colR =  {4{rnd_pixels[1:0]}};
+     assign colB =  {4{rnd_pixels[3:2]}};
+     assign colG =  {2'b0,{4{rnd_pixels[4]}},2'b0};   // dim grren, as it dominates
 
-  // up-down counters for fading
-   always @(posedge clk)
-     begin
-       if (two_ms)
-	 begin
-           cnt <= cnt + 2'h01;   // every XXms change the color
-           if (cnt == 0)
-             begin
-               if (cnt2 ==  127)
-	         begin
-                   cnt2 <= 126;
-                   updn <= ~updn;
-	           ph   <= ph + 3'b1;
-	         end
-	       else if (cnt2==1 && updn==1)  // down counting
-	         begin
-                   cnt2 <= 1;
-                   updn <= ~updn;
-	           ph   <= ph + 3'b1;
-	         end
-	       else if (updn==0)
-                 cnt2 <= cnt2 + 7'b1;
-	       else
-                 cnt2 <= cnt2 - 7'b1;
-	     end   // cnt == 0
-	  end      // 10 ms
-     end
-
-   always @(*)
-    case (ph)   // set up neopixel color cycling (all are half brightness)
-      3'h0: np_pixels[23:0] <= {8'h00,8'hfe,8'h00};    // red
-      3'h1: np_pixels[23:0] <= {8'h00,8'h00,8'hfe};    // green
-      3'h2: np_pixels[23:0] <= {8'hfe,8'h00,8'h00};    // blue
-      3'h3: np_pixels[23:0] <= {8'h00,{cnt2_R,1'b0},8'h00};  // fade red
-      3'h4: np_pixels[23:0] <= {8'h00,8'h00,{cnt2_G,1'b0}};  // fade green
-      3'h5: np_pixels[23:0] <= {{cnt2_B,1'b0},8'h00,8'h00};  // fade blue
-      3'h6: np_pixels[23:0] <= {8'h00,{cnt2_R,1'b0},{~cnt2_G,1'b0}}; // mix RG
-      3'h7: np_pixels[23:0] <= {{cnt2_B,1'b0},8'h00,{~cnt2_G,1'b0}}; // mix BG
-    endcase
+      
+// assign  np_pixels[23:0] = { {8{~cnt[0]}},{8{~cnt[1]}},{8{~cnt[2]}}};
+// assign  np_pixels[23:0] = { colB,colR,colG};
+ assign  np_pixels[23:0] = { colB & {8{rnd_pixels[3]}},colR & {8{rnd_pixels[4]}},colG & {8{rnd_pixels[2]}} };
 
 endmodule
 

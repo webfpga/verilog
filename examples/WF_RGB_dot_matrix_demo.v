@@ -1,6 +1,6 @@
-// @MAP_IO RGB_DOUT    24 // original pin = 4
-// @MAP_IO RGB_CLK_OUT 25 // original pin = 9
-// @MAP_IO RGB_LOAD    26 // original pin = 6
+// @MAP_IO RGB_DOUT    25 
+// @MAP_IO RGB_CLK_OUT 26 
+// @MAP_IO RGB_LOAD    27 
 
 // #CAS_CLK pin OSC_i/CLKHF 83.3    //ns   
 

@@ -1,31 +1,35 @@
+// @MAP_IO RGB_DOUT    25 
+// @MAP_IO RGB_CLK_OUT 26 
+// @MAP_IO RGB_LOAD    27 
+
 // #CAS_CLK pin OSC_i/CLKHF 83.3    //ns   
-// @MAP_IO RGB_DOUT    24
-// @MAP_IO RGB_CLK_OUT 25
-// @MAP_IO RGB_LOAD    26
-//
-// @MAP_IO SIO_MST_OUT_SLV_IN 19
-// @MAP_IO SIO_CLK_OUT        17 
-// @MAP_IO SIO_LOAD           15
-// @MAP_IO SIO_MST_IN_SLV_OUT 18 
 
-module fpga_top (
-
-    output wire      RGB_CLK_OUT,
-    output wire      RGB_DOUT,
-    output wire      RGB_LOAD,
-    // SIO IOs
-    output wire      SIO_CLK_OUT,
-    output wire      SIO_MST_OUT_SLV_IN,
-    input  wire      SIO_MST_IN_SLV_OUT,
-    output wire      SIO_LOAD
+module fpga_top(
+    output wire RGB_CLK_OUT,
+    output wire RGB_DOUT,
+    output wire RGB_LOAD
 );
 
-   wire [15:0]  ram_rd_pixels;
-   wire [5:0]   ram_rd_addr;
-   reg  [2:0]  cnt;
+// demo shows solid color background and different color dot moves through the
+// display.
+//
+   reg         updates;   // allow updates to memory only when not scanning
 
-   // joystick
-   wire [4:0] joystick;
+   // DEMO uses a dual port RAM.
+   // Write port: user puts colors into memory
+   // Read port:  RGB drive requests data from this memory via the read port
+   wire [15:0] ram_wr_pixels;
+   reg  [5:0]  ram_wr_addr;
+   reg  [8:0]  ram_wr_dot_addr;
+   wire        ram_wr_en;
+
+   wire [15:0] ram_rd_pixels;
+   wire [5:0]  ram_rd_addr;
+
+   wire        colR;
+   wire        colG;
+   wire        colB;
+   reg  [2:0]  dot_color;
 
 /////////////////////////////////////////////////////////////////////////
 //
@@ -49,20 +53,34 @@ module fpga_top (
            .timer_pulse(ten_us));
  
      // include time base  2ms
-     WF_timer #(.COUNT(099)) two_msec(   
+     WF_timer #(.COUNT(199)) two_msec(   
            .clk(clk),
            .enable(ten_us),
            .timer_pulse(two_ms));
 
-     // include time base  1 sec
-     WF_timer #(.COUNT(499)) one_sec( 
+     // include time base  1/4 sec
+     WF_timer #(.COUNT(124)) quarter_sec( 
            .clk(clk),
            .enable(two_ms),
-           .timer_pulse(one_second));
+           .timer_pulse(quarter_second));
 
+//
+// use memory to store 8x8 pixel matrix colors.
+//  64x16 size is all that is needed for one dot matrix display.
+//  16 bits color 5/5/5 bits. No PWM is supported
+//  yet, so just one bit per color.
+
+   WF_bram256x16 dot_memory (
+     .clk(clk),
+     .wen(ram_wr_en),
+     .ren(1'b1),
+     .waddr({2'b0,ram_wr_addr}),
+     .raddr({2'b0,ram_rd_addr}),
+     .wdata(ram_wr_pixels),
+     .rdata(ram_rd_pixels));
 
 // bring in the RGB I/F
-    WF_RGB_if RGB_if_inst(
+    WF_RGB_if #(.ASYNC_RAM_IF(1'b0)) RGB_if_inst(
      .clk(clk),
      .scan_en(two_ms),
      .scan_done(scan_done),
@@ -73,105 +91,47 @@ module fpga_top (
      .DOUT(RGB_DOUT)
      );
 
-         // include joystick board
-     WF_joystick_board joystick_inst (
-             .clk(clk),
-             .scan_enable(two_ms), // better than 60Hz, so 2ms min.
-     // LEDs
-             .slide_leds_red(8'h0),
-             .slide_leds_green(8'h0),
-             .status_leds_red(4'b1010),
-             .status_leds_blue(4'b0101),
-         //    .circle_leds_red(12'h0),
-             .circle_leds_red({2'b0,joystick[4],2'b0,joystick[2],2'b0,joystick[1],2'b0,joystick[0]}),
-             .circle_leds_green(12'h0),
-     // switches
-             .slide_switches(),
-             .joystick_switches(joystick), // [0]=N,[4]=W,[1]=E,[2]=S,[3]=Push
-     // header IOs
-             .header_outputs(8'h0),  // 
-             .header_inputs(),
-     // extrenal IOs
-             .LOAD(SIO_LOAD),
-             .CLK_OUT(SIO_CLK_OUT),
-             .MST_OUT_SLV_IN(SIO_MST_OUT_SLV_IN),
-             .MST_IN_SLV_OUT(SIO_MST_IN_SLV_OUT)
-     );
-
-
 ///////////////////////////////////////////////////////////////////
-
- //  Demo a dot moving on the do matrix controlled by the joystick switch
- 
-  reg [4:0] joystick_d;
-  reg [5:0] dot;
-
-
-  // capture joystick and detect when pushed
+//
+//  ram_wr_dot_addr holds the address of the dot in bis 5:0, bits
+//  [8:6] are the current backgroud color. This portion will increament
+//  every 64 counts, or one complete display cycle of a moving DOT.
+//
+// sync to the scan done sugnals to updates to memory
+// when scanning isn't being done.
+// if you don't sync, then updates could occur during scaning and may
+// get a partial changed color frame.
+//
      always @ (posedge clk)
-       joystick_d <= joystick;
-
-     assign center_pushed = joystick[3] && !joystick_d[3];
-     assign north_pushed  = joystick[0] && !joystick_d[0];
-     assign south_pushed  = joystick[2] && !joystick_d[2];
-     assign east_pushed   = joystick[1] && !joystick_d[1];
-     assign west_pushed   = joystick[4] && !joystick_d[4];
-
+       if (two_ms)
+         updates <= 1'b0;
+       else if (scan_done)
+         updates <= 1'b1;
 
      always @ (posedge clk)
-       if (center_pushed || (cnt == 0))   // like a reset to center the dot again
-	 begin                            // and make the color not black
-           dot <= 28;
-           if (cnt == 0) 
-             cnt <= 1;
-           else
-	     cnt <= cnt + 1;
-	 end
-       else
-	 begin    
-	   // north case
-	   if (north_pushed)
-	     if (dot[5:3] == 3'b000)     // at top edge
-               begin
-	         if (cnt == 7) cnt <= 1; // change color
-		 else cnt <= cnt +1;
-	       end
-             else 
-	      dot <= dot  - 8;
+       if (updates)   // update when not scanning
+          ram_wr_addr <= ram_wr_addr + 1;
 
-	   // south case
-	   if (south_pushed)
-	     if (dot[5:3]  == 3'b111)    // at bottom edge
-               begin
-	         if (cnt == 7) cnt <= 1; // change color
-		 else cnt <= cnt +1;
-	       end
-             else 
-	      dot <= dot  + 8;
+     assign ram_wr_en = updates;
 
-	   // east case
-	   if (east_pushed)
-	     if (dot[2:0] == 3'b111)     // at right edge
-               begin
-	         if (cnt == 7) cnt <= 1; // change color
-		 else cnt <= cnt +1;
-	       end
-             else 
-	      dot <= dot  + 1;
+     assign ram_wr_pixels = (ram_wr_addr == ram_wr_dot_addr[5:0]) ?
+           {1'b0,4'b0,dot_color[0], 4'b0,dot_color[1],4'b0, dot_color[2]} :
+           {1'b0,4'b0,colR, 4'b0,colG,4'b0, colB}; 
 
-	   // west case
-	   if (west_pushed)
-	     if (dot[2:0] == 3'b000)     // at left edge
-               begin
-	         if (cnt == 7) cnt <= 1; // change color
-		 else cnt <= cnt +1;
-	       end
-             else 
-	      dot <= dot  - 1;
-         end
+// change dot every 1/4 second
+     always @ (posedge clk)
+       if (quarter_second)
+         ram_wr_dot_addr <= ram_wr_dot_addr + 1;
 
-     assign ram_rd_pixels = (dot == ram_rd_addr) ? 16'h0 : { 1'b0,4'b0,cnt[0], 4'b0,cnt[1],4'b0, cnt[2]}; 
 
+ // change background color after every full moving dot cycle
+    assign colR = ram_wr_dot_addr[6];
+    assign colG = ram_wr_dot_addr[7];
+    assign colB = ram_wr_dot_addr[8];
+
+ // dot color is next backgroud color
+     always @ (posedge clk)
+       dot_color <= {colB,colG,colR} + 1;
 
 endmodule
 
@@ -210,6 +170,11 @@ endmodule
 	  output wire LOAD,
 	  output wire DOUT
   );
+
+  // parameter allows for both type of memories, ASYNC and SYNC.
+  // ASYNC meaning, read data is avaliable on next clock edge after address clock
+  // SYNC  meaning, read data is avaliable two clock edges after address clock
+  parameter ASYNC_RAM_IF = 1'b1;
 
   wire scan_done = dotclk_done;
 
@@ -251,7 +216,7 @@ endmodule
 
     always@ (posedge clk)   
       if (scan_en)      // start cycle
-   //   if (CPUIN_PA3 ? one_second:scan_en)      // start cycle
+   //   if (WF_CPU3, ? one_second:scan_en)      // start cycle
         phase_rd <= 1'b1;
       else
         begin         
@@ -302,11 +267,22 @@ endmodule
     // below supports only 8 colors, need to add PWM to mix the colors
     always@ (posedge clk)   
       if (phase_rd) // reading data while row sel is shifting
-        begin
-         data_next[dotclk_index[2:0]]    <= ram_rd_pixels[0];   // blue
-         data_next[dotclk_index[2:0]+16] <= ram_rd_pixels[5];   // green
-         data_next[dotclk_index[2:0]+8]  <= ram_rd_pixels[10];  // red
+         begin
+           if (ASYNC_RAM_IF == 1'b1)
+             begin
+               data_next[dotclk_index[2:0]]    <= ram_rd_pixels[0];   // blue
+               data_next[dotclk_index[2:0]+16] <= ram_rd_pixels[5];   // green
+               data_next[dotclk_index[2:0]+8]  <= ram_rd_pixels[10];  // red
+	     end
+	   else
+             begin
+               dotclk_index_d <= dotclk_index[2:0];  // ram pipeline
+               data_next[dotclk_index_d[2:0]]    <= ram_rd_pixels[0];   // blue
+               data_next[dotclk_index_d[2:0]+16] <= ram_rd_pixels[5];   // green
+               data_next[dotclk_index_d[2:0]+8]  <= ram_rd_pixels[10];  // red
+	     end
        end
+
 
 ////////////////////////////////////////////////////////////////////////////
 //
@@ -491,172 +467,3 @@ endmodule
      assign switch_released =  switch_out && ~switch_out_d;
 
    endmodule
-
-///////////////////////////////////////////////////////////////////////////
-//
-// joystick board
-//
-//
-// The joystick board has a serial intreface to access the switch states,
-// control the LED states, sample the 8 header inputs and control 8 header
-// outputs. The serial stream is SPI like and is 24 bits long.
-//
-// sent data:  {header outputs[7:0], led columns[5:0],2'b0,led rows[7:0]}
-// recv'd data:{header inputs[7:0], slide_sitches[7:0],3'b0,joystick[4:0]}
-//
-// The 48 leds are in column/row form and need to be scanned. At least
-// at 60Hz or better than 2ms. 6 columns and 8 rows.
-//  mapping to be added here
-//
-//  Switches are not scanned but are in the serial stream.
-////////////////////////////////////////////////////////////////////////////
-//
-
-      module WF_joystick_board (
-     input        clk,
-     input        scan_enable,
-     // LEDs
-     input [7:0]  slide_leds_red,      // active high LEDs, 1=lite
-     input [7:0]  slide_leds_green,    // active high LEDs, 1=lite
-     input [3:0]  status_leds_red,     // active high LEDs, 1=lite
-     input [3:0]  status_leds_blue,    // active high LEDs, 1=lite
-     input [11:0] circle_leds_red,     // active high LEDs, 1=lite
-     input [11:0] circle_leds_green,   // active high LEDs, 1=lite
-     // switches
-     output reg  [7:0] slide_switches,  //  slide up == 1
-     output reg  [4:0] joystick_switches, // [0]=N,[4]=W,[1]=E,[2]=S,[3]=Push
-     // extra IOs
-     input       [7:0] header_outputs,
-     output reg  [7:0] header_inputs,
-
-     // extrenal IOs
-     output       LOAD,
-     output reg   CLK_OUT,
-     output       MST_OUT_SLV_IN,
-     input        MST_IN_SLV_OUT
-     );
-
-// define variables
-   reg [5:0] columns;   // scan enables for each column
-
-   reg       shiftclk_en;   // during DOUT shifting
-   reg [5:0] dataout_index;
-
-   reg [7:0]  current_row;
-   reg [15:0] data_out; //  output shift register
-   reg [23:0] data_in;  //  input switch register
-   reg  [4:0] joystick;
-
-   // capture pulse for sampling switches
-   reg        shiftclk_en_d;
-   wire       load_clk;
-
-////////////////////////////////////////////////////////////////////////////
-   // mappings of switches, header bits and LEDs
-    always @ (posedge clk)
-      if (load_clk)
-       begin
-        header_inputs[7:0]     <= data_in[23:16];
-        joystick_switches[4:0] <= ~data_in[4:0];
-        slide_switches[7:0]    <= ~data_in[15:8];  //slide up == 1
-       end
-
-////////////////////////////////////////////////////////////////////////////
-// column initialization and rotation.
-//
-   always @ (posedge clk)
-     begin
-       if (columns == 6'h0)     // just came out of reset
-         columns <= 6'h01;
-
-       if (scan_enable)
-         columns <= {columns[4:0],columns[5]};   // rotate the select bit
-     end
-
-////////////////////////////////////////////////////////////////////////////
-// send data out 24 clocks of data, {Outputs[7:0], columns[5:0],2'b0, rows[7:0]}
-//
-//
-   // control logic for 24 bit shift register
-   always @ (posedge clk)
-     begin
-       if (scan_enable)
-         begin
-           shiftclk_en     <= 1'b1;
-           dataout_index   <= 6'b0;// two of our clocks for each serial clk
-         end
-       else
-         begin
-           if (shiftclk_en)
-             begin
-               if (dataout_index == 6'd47)   // check for last bit
-                 shiftclk_en <= 1'b0;
-               else
-                 dataout_index <= dataout_index + 6'h1;
-             end
-         end
-   end   // always
-
-   // send data out and capture switch data
-   always @ (posedge clk)
-     if (shiftclk_en )
-       begin
-         if (dataout_index[0]) // only change on falling edge
-           begin
-             data_out <= {data_out[14:0],1'b0}; // shift data
-           end
-
-        // capture input data on DIN
-         else   // rising edge capture - data will change for next cycle on
-                 // the board, we have the earliest clock.
-            data_in <= {data_in[22:0],MST_IN_SLV_OUT};
-
-         if (dataout_index == 5'd31) // header outputs are last byte sent
-           data_out <= {header_outputs,8'h00};
-
-       end
-     else
-         data_out<= { current_row[7:0],2'b0,columns}; // load up LEDs
-                                                      // when not shifting
-
-
-    // capture switch data for next sampling cycle
-    always @ (posedge clk)
-      shiftclk_en_d <= shiftclk_en;   // create pulse
-
-    assign load_clk = shiftclk_en_d && ~shiftclk_en;
-
-////////////////////////////////////////////////////////////////////////////
-// MAP leds to rows and columns
-//active low turns on LED
-   always @(*)
-      case (columns)  // synthesis parallel_case
-        6'd1 : current_row = ~slide_leds_red[7:0];
-        6'd2 : current_row = ~slide_leds_green[7:0];
-        6'd4 : current_row = ~circle_leds_red[7:0];
-        6'd8 : current_row = ~circle_leds_green[7:0];
-        6'd16: current_row = ~{status_leds_red[3:0],circle_leds_red[11:8]};
-        default:
-         current_row = ~{status_leds_blue[3:0],circle_leds_green[11:8]};
-      endcase
-
-////////////////////////////////////////////////////////////////////////////
-// create external IOs
-   assign LOAD = ~shiftclk_en;
-
-// generate clock
-   always @ (posedge clk)
-     if (shiftclk_en)
-       CLK_OUT <= ~CLK_OUT;
-     else
-       begin
-         if (load_clk)
-           CLK_OUT <= 1'b1;   // capture for switches
-         else
-           CLK_OUT <= 1'b0;   // make sure it at zero at idle
-       end
-
-   assign MST_OUT_SLV_IN = data_out[15];
-
-endmodule
-

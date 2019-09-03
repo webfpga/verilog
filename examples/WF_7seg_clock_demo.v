@@ -1,8 +1,38 @@
-// @MAP_IO DOUT    10 // (internal FPGA pin = 28)
-// @MAP_IO CLK_OUT  9 // (internal FPGA pin = 26)
-// @MAP_IO LOAD     8 // (internal FPGA pin = 25)
+//
+// --------------------------------------------------------------------
+// --------------------------------------------------------------------
+// Cascadia Web Based FPGA Tools  Section
+//
+// IOs are set with comment directive @MAP_IO ioName ioPin
+//
+// @MAP_IO DOUT      10 // (internal FPGA pin = 28)
+// @MAP_IO CLK_OUT   9  // (internal FPGA pin = 26)
+// @MAP_IO LOAD      8  // (internal FPGA pin = 25)
+
+// Clock is define with directive #CAS_XXX  clkName clkPeriod (12MHz)
+// This builds the SDC file used for P&R and timing checks
+// #CASS_CLK net CLK 83   //ns
 // #CAS_CLK pin OSC_i/CLKHF 83.3    //ns   
+//
+// Device target board is done with directive #CAS_XXXXXX boardName
+// #CAS_TARGET  SHASTAPLUS
+
+// set top level module
+// #CAS_NAME  WF_7seg_clock // top level module
+// --------------------------------------------------------------------
+//  #CAS_DESC  7 segment display used as a clock. Push buttom clears clock
+//
+//  This DEMO uses the internal HFOSC which isn't accurate enough for
+//  a real clock. An external cystal is needed to gain the presion needed.
+//
+
+//           
+// --------------------------------------------------------------------
+//
+// Revision History :
+
 module fpga_top(
+
     output wire      CLK_OUT,
     output wire      DOUT,
     output wire      LOAD,
@@ -55,17 +85,11 @@ module fpga_top(
            .enable(ten_us),
            .timer_pulse(two_ms));
 
-     // include time base  10ms
-     WF_timer #(.COUNT(4)) ten_msec(
+     // include time base  1 sec
+     WF_timer #(.COUNT(499)) one_sec(
            .clk(clk),
            .enable(two_ms),
-           .timer_pulse(ten_ms));
-
-     // include time base  1/2 sec
-     WF_timer #(.COUNT(49)) half_sec(
-           .clk(clk),
-           .enable(ten_ms),
-           .timer_pulse(half_second));
+           .timer_pulse(one_second));
 
 //
 //  debounce switch in
@@ -84,12 +108,14 @@ module fpga_top(
      WF_BL_7seg_if WF_BL_7seg_if (
 	.clk(clk),
 	.scan_enable(two_ms),   // should be >60Hz, 2 ms or better
+	                        // 5 calls for one 1 cycle
+				// 60Hz == 16.67ms -> /5 -> 3.33ms
 
 	.digit0(digit0),    // BCD digits, 0 is LSD
 	.digit1(digit1),
 	.digit2(digit2),
 	.digit3(digit3),
-	.colon(2'b01),      // 00 colon, 01 decpoint, 11 none
+	.colon(2'b00),      // 00 colon, 01 decpoint, 11 none
 
 	.CLK_OUT(CLK_OUT),
 	.LOAD(LOAD),
@@ -99,10 +125,9 @@ module fpga_top(
 ////////////////////////////////////////////////////////////////////////////
 //  DEMO uses the webfpga Blue 7 segment 4 digit board
 //
-// This will be a 10ms timer up to 99 seconds.
-// pressing the user button can stop and start the timer as well as
-// clear the timer if held for 1/2 second.
-// Also the website button1 can also stop and start the timer.
+// This will be a clock show 2 digits of second, followed by a colon
+// then two digits of minutes.
+// Pressing the user push botton or push the webfpga BNT1 will reset the clock.
 //
 ////////////////////////////////////////////////////////////////////////////
 //
@@ -112,40 +137,13 @@ module fpga_top(
 
     assign cpu_toggled = (cpu_in_d && ~WF_CPU1) || (~cpu_in_d && WF_CPU1);
 
-//////////////////////////////////////////////////////////////////////
-//
-// timer control decoding from push switch states
-//  push to stop or start, hold for clearing
-   
-    // timer stop/start 
-   always @ (posedge clk)
-       if (switch_pushed || cpu_toggled)
-           timer_enable <= ~timer_enable;
-
-       // timer reset
-   always @ (posedge clk)
-     if (switch_debounced == 0)   // on board push switch 0 if pushed
-       begin
-         if ( half_second)        // wait for two 1/2 pusles
-           begin
-             if (once_half_sec)   // seen at least once
-               timer_reset <= 1'b1;
-             else
-               once_half_sec <= 1'b1;
-           end
-       end
-     else                        // once button release clear states
-       begin
-         timer_reset   <= 0;
-         once_half_sec <= 0;
-       end
 
 ////////////////////////////////////////////////////////////////////////////
-// create timer, counts 10ms and seconds in BCD.
+// create clock, counts seconds and minutes.
 //
     always @ (posedge clk)
       begin
-        if (timer_reset)
+        if (switch_debounced==0 || cpu_toggled)
           begin
             digit3 <= 4'h0;  
             digit2 <= 4'h0;  
@@ -154,24 +152,24 @@ module fpga_top(
           end
         else
           begin
-            if (ten_ms && timer_enable)
+            if (one_second)
               begin
                 if (digit0 == 4'h9)
 	          begin
 	            digit0 <= 4'h0;
-                    if (digit1 == 4'h9)
+                      if (digit1 == 4'h5)
 	              begin
 	                digit1 <= 4'h0;
-		          if (digit2 == 4'h9)
+	  	          if (digit2 == 4'h9)
 		            begin
 		              digit2 <= 4'h0;
-		              if (digit3 == 4'h9)
+		              if (digit3 == 4'h5)
 		                begin
 		                  digit3 <= 4'h0;
   		                end
 		              else
                                 digit3 <= digit3 + 4'h1;
-		            end
+	  	            end
 		          else
                             digit2 <= digit2 + 4'h1;
 	              end
@@ -180,12 +178,12 @@ module fpga_top(
                   end
 	        else
 	          digit0 <= digit0 + 4'h1;
-              end  // 10ms
-            end
-          end   //else
+              end  // one second
+          end //else
+      end   //always
 
 
-      endmodule
+ endmodule
 
 ////////////////////////////////////////////////////////////////////////////
 
